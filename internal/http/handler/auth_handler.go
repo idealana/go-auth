@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"go-auth/internal/model/web"
 	"go-auth/internal/service"
+	"go-auth/pkg/validator"
 )
 
 func NewAuthHandler(service *service.AuthService) *AuthHandler {
@@ -22,8 +23,16 @@ func (handler *AuthHandler) Login(c fiber.Ctx) error {
 	var req web.LoginRequest
 
 	if err := c.Bind().Body(&req); err != nil {
+		if resultValidate, ok := err.(*validator.ValidationError); ok {
+            return c.Status(400).JSON(fiber.Map{
+                "message": "Bad request.",
+                "errors": resultValidate.Errors,
+            })
+        }
+
         return c.Status(400).JSON(fiber.Map{
             "message": "Invalid Request.",
+            "errors": map[string]string{},
         })
     }
 
