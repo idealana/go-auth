@@ -36,10 +36,10 @@ func (handler *AuthHandler) Login(c fiber.Ctx) error {
         })
     }
 
-    user, err := handler.service.Login(req)
+    user, token, err := handler.service.Login(req)
 
     if err != nil {
-    	return c.JSON(fiber.Map{
+    	return c.Status(400).JSON(fiber.Map{
 	        "message": err.Error(),
 	    })
     }
@@ -47,5 +47,6 @@ func (handler *AuthHandler) Login(c fiber.Ctx) error {
     return c.JSON(fiber.Map{
         "message": "Login Successfully.",
         "data": user,
+        "token": token,
     })
 }
