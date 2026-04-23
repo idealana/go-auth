@@ -8,21 +8,20 @@ import (
     "go-auth/pkg/utils"
 )
 
-func NewAuthService(userRepository iface.UserRepositoryInterface, jwt *utils.JWT) *AuthService {
+func NewAuthService(userRepository iface.UserRepositoryInterface, tokenUtility *utils.TokenUtility) *AuthService {
     return &AuthService{
         UserRepository: userRepository,
-        JWT: jwt,
+        TokenUtility: tokenUtility,
     }
 }
 
 type AuthService struct {
     UserRepository iface.UserRepositoryInterface
-    JWT *utils.JWT
+    TokenUtility *utils.TokenUtility
 }
 
-func (service *AuthService) Login(req web.LoginRequest) (web.LoginResponse, string, error) {
-	user, err := service.UserRepository.FindByEmail(req.Email)
-    res := web.NewLoginResponse(user)
+func (service *AuthService) Login(req web.LoginRequest) (string, string, error) {
+	_, err := service.UserRepository.FindByEmail(req.Email)
 
     if err != nil {
         return res, "", errors.New("Invalid email or password.")
@@ -34,11 +33,11 @@ func (service *AuthService) Login(req web.LoginRequest) (web.LoginResponse, stri
         return res, "", errors.New("Invalid email or password.")
     }
 
-    token, err := service.JWT.GenerateToken(&domain.User{ID: user.ID})
+    accessToken, refreshToken, err := service.TokenUtility.GenerateToken(&domain.User{ID: user.ID})
 
     if err != nil {
         return res, "", errors.New("Failed to generate token.")
     }
 
-    return res, token, nil
+    return accessToken, refreshToken, nil
 }
