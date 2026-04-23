@@ -2,33 +2,60 @@ package utils
 
 import (
 	"time"
+	"crypto/rand"
+	"encoding/hex"
+	
 	"github.com/golang-jwt/jwt/v5"
 	"go-auth/internal/model/domain"
 )
 
-type JWT struct {
+type TokenUtility struct {
 	AccessKey string
 	AccessExpired int
 }
 
-func NewJWT(accessKey string, accessExpired int) *JWT {
-	return &JWT{
+func NewTokenUtility(accessKey string, accessExpired int) *TokenUtility {
+	return &TokenUtility{
 		AccessKey: accessKey,
 		AccessExpired: accessExpired,
 	}
 }
 
-func (t JWT) GenerateToken(user *domain.User) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+func (t *TokenUtility) generateJWT(user *domain.User, key string, expired int) (string, error) {
+	claims := jwt.MapClaims{
 		"id": user.ID,
-		"expire": time.Now().Add(time.Minute * time.Duration(t.AccessExpired)).UnixMilli(),
-	})
+		"exp": time.Now().Add(time.Minute * time.Duration(expired)).Unix(),
+	}
 
-	jwtToken, err := token.SignedString([]byte(t.AccessKey))
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	
+	return token.SignedString([]byte(key))
+}
 
+func (t *TokenUtility) GenerateAccessToken(user *domain.User) (string, error) {
+	return t.generateJWT(user, t.AccessKey, t.AccessExpired)
+}
+
+func (t *TokenUtility) GenerateRefreshToken() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
 	if err != nil {
 		return "", err
 	}
 
-	return jwtToken, nil
+	return hex.EncodeToString(b), nil
+}
+
+func (t *JWT) GenerateToken(user *domain.User) (string, string, error) {
+	accessToken, err := t.GenerateAccessToken(user)
+	if err != nil {
+		return "", "", err
+	}
+	
+	refreshToken, err := t.GenerateRefreshToken()
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshToken, nil
 }
