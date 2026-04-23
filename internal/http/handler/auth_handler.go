@@ -46,7 +46,6 @@ func (handler *AuthHandler) Login(c fiber.Ctx) error {
 
     return c.JSON(fiber.Map{
         "message": "Login Successfully.",
-        "access_token": accessToken,
-        "refresh_token": refreshToken,
+        "token": accessToken,
     })
 }
