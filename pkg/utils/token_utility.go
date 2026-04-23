@@ -8,8 +8,25 @@ import (
 	"encoding/hex"
 	
 	"github.com/golang-jwt/jwt/v5"
-	"go-auth/internal/model/domain"
 )
+
+type JWTGenerator interface {
+    GenerateAccessToken(user UserClaims) (string, error)
+    GenerateToken(user UserClaims) (string, string, error)
+}
+
+type RefreshTokenGenerator interface {
+    GenerateRefreshToken() (string, error)
+}
+
+type UserClaims interface {
+    GetUserID() int
+}
+
+type TokenGenerator interface {
+	JWTGenerator
+	RefreshTokenGenerator
+}
 
 type JWTClaims struct {
 	UserID int `json:"user_id"`
@@ -17,57 +34,69 @@ type JWTClaims struct {
 }
 
 type TokenUtility struct {
-	AppName string
-	AccessKey string
-	AccessExpired time.Duration
+	appName string
+	accessKey []byte
+	accessExpired time.Duration
+	signingMethod jwt.SigningMethod
 }
 
-func NewTokenUtility(appName, accessKey string, accessExpired time.Duration) *TokenUtility {
+func NewTokenUtility(appName, accessKey string, accessExpired time.Duration) (TokenGenerator, error) {
+	if appName == "" {
+        return nil, errors.New("app name is required")
+    }
+    if accessKey == "" {
+        return nil, errors.New("access key is required")
+    }
+    if accessExpired <= 0 {
+        return nil, errors.New("access expired must be positive")
+    }
+	
 	return &TokenUtility{
-		AppName: appName,
-		AccessKey: accessKey,
-		AccessExpired: accessExpired,
-	}
+		appName: appName,
+		accessKey: []byte(accessKey),
+		accessExpired: accessExpired,
+		signingMethod:  jwt.SigningMethodHS256, // default
+	}, nil
 }
 
-func (t *TokenUtility) generateJWT(user *domain.User, key string, expired int) (string, error) {
+func (t *TokenUtility) generateJWT(user UserClaims, key []byte, expired time.Duration) (string, error) {
 	if user == nil {
-		return "", errors.New("User not found.")
+		return "", errors.New("generate jwt: user is required")
 	}
 
-	exp := time.Now().Add(t.AccessExpired)
 	now := time.Now()
 
 	claims := JWTClaims{
-		UserID: user.ID,
+		UserID: user.GetUserID(),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(exp),
+			ExpiresAt: jwt.NewNumericDate(now.Add(expired)),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
-			Issuer:    t.AppName,
+			Issuer:    t.appName,
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(t.signingMethod, claims)
 	
-	return token.SignedString([]byte(key))
+	return token.SignedString(key)
 }
 
-func (t *TokenUtility) GenerateAccessToken(user *domain.User) (string, error) {
-	return t.generateJWT(user, t.AccessKey, t.AccessExpired)
+func (t *TokenUtility) GenerateAccessToken(user UserClaims) (string, error) {
+	return t.generateJWT(user, t.accessKey, t.accessExpired)
 }
 
 func (t *TokenUtility) GenerateRefreshToken() (string, error) {
-	b := make([]byte, 32)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
+	const byteSize = 32
+	b := make([]byte, byteSize)
+	
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate refresh token: %w", err)
 	}
 
 	return hex.EncodeToString(b), nil
 }
 
-func (t *TokenUtility) GenerateToken(user *domain.User) (string, string, error) {
+func (t *TokenUtility) GenerateToken(user UserClaims) (string, string, error) {
 	accessToken, err := t.GenerateAccessToken(user)
 	if err != nil {
 		return "", "", fmt.Errorf("generate access token: %w", err)
