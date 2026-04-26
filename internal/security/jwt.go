@@ -1,4 +1,4 @@
-package utils
+package security
 
 import (
 	"errors"
@@ -33,14 +33,14 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-type TokenUtility struct {
+type JWTAuthToken struct {
 	appName string
 	accessKey []byte
 	accessExpired time.Duration
 	signingMethod jwt.SigningMethod
 }
 
-func NewTokenUtility(appName, accessKey string, accessExpired time.Duration) (TokenGenerator, error) {
+func NewJWTAuthToken(appName, accessKey string, accessExpired time.Duration) (TokenGenerator, error) {
 	if appName == "" {
         return nil, errors.New("app name is required")
     }
@@ -51,7 +51,7 @@ func NewTokenUtility(appName, accessKey string, accessExpired time.Duration) (To
         return nil, errors.New("access expired must be positive")
     }
 	
-	return &TokenUtility{
+	return &JWTAuthToken{
 		appName: appName,
 		accessKey: []byte(accessKey),
 		accessExpired: accessExpired,
@@ -59,7 +59,7 @@ func NewTokenUtility(appName, accessKey string, accessExpired time.Duration) (To
 	}, nil
 }
 
-func (t *TokenUtility) generateJWT(user UserClaims, key []byte, expired time.Duration) (string, error) {
+func (t *JWTAuthToken) generateJWT(user UserClaims, key []byte, expired time.Duration) (string, error) {
 	if user == nil {
 		return "", errors.New("generate jwt: user is required")
 	}
@@ -81,11 +81,11 @@ func (t *TokenUtility) generateJWT(user UserClaims, key []byte, expired time.Dur
 	return token.SignedString(key)
 }
 
-func (t *TokenUtility) GenerateAccessToken(user UserClaims) (string, error) {
+func (t *JWTAuthToken) GenerateAccessToken(user UserClaims) (string, error) {
 	return t.generateJWT(user, t.accessKey, t.accessExpired)
 }
 
-func (t *TokenUtility) GenerateRefreshToken() (string, error) {
+func (t *JWTAuthToken) GenerateRefreshToken() (string, error) {
 	const byteSize = 32
 	b := make([]byte, byteSize)
 	
@@ -96,7 +96,7 @@ func (t *TokenUtility) GenerateRefreshToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (t *TokenUtility) GenerateToken(user UserClaims) (string, string, error) {
+func (t *JWTAuthToken) GenerateToken(user UserClaims) (string, string, error) {
 	accessToken, err := t.GenerateAccessToken(user)
 	if err != nil {
 		return "", "", fmt.Errorf("generate access token: %w", err)
