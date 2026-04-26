@@ -3,42 +3,54 @@ package service
 import (
 	"errors"
     "go-auth/internal/model/domain"
-	"go-auth/internal/model/web"
+	"go-auth/internal/model/dto"
     "go-auth/internal/repository/iface"
-    "go-auth/pkg/utils"
 )
 
-func NewAuthService(userRepository iface.UserRepositoryInterface, jwt *utils.JWT) *AuthService {
+var (
+	ErrInvalidCredentials = errors.New("invalid email or password")
+)
+
+type TokenService interface {
+    GenerateToken(*domain.User) (string, string, error)
+}
+
+type PasswordService interface {
+    Verify(hashed, plain string) bool
+}
+
+func NewAuthService(userRepository iface.UserRepositoryInterface, tokenService TokenService, passwordService PasswordService) *AuthService {
     return &AuthService{
         UserRepository: userRepository,
-        JWT: jwt,
+        TokenService: tokenService,
+		PasswordService: passwordService,
     }
 }
 
 type AuthService struct {
     UserRepository iface.UserRepositoryInterface
-    JWT *utils.JWT
+    TokenService TokenService
+	PasswordService PasswordService
 }
 
-func (service *AuthService) Login(req web.LoginRequest) (web.LoginResponse, string, error) {
-	user, err := service.UserRepository.FindByEmail(req.Email)
-    res := web.NewLoginResponse(user)
-
+func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
+	user, err := s.UserRepository.FindByEmail(req.Email)
     if err != nil {
-        return res, "", errors.New("Invalid email or password.")
+        return dto.LoginResponse{}, ErrInvalidCredentials
+    }
+	
+    if !s.PasswordService.Verify(user.Password, req.Password) {
+        return dto.LoginResponse{}, ErrInvalidCredentials
     }
 
-    isVerify := utils.VerifyPassword(user.Password, req.Password)
-
-    if !isVerify {
-        return res, "", errors.New("Invalid email or password.")
-    }
-
-    token, err := service.JWT.GenerateToken(&domain.User{ID: user.ID})
-
+    accessToken, refreshToken, err := s.TokenService.GenerateToken(&user)
     if err != nil {
-        return res, "", errors.New("Failed to generate token.")
+        return dto.LoginResponse{}, err
     }
 
-    return res, token, nil
+    return dto.LoginResponse{
+		UserID: user.ID,
+		AccessToken: accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }

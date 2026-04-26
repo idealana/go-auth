@@ -6,3 +6,7 @@ type User struct {
 	Email string
     Password string
 }
+
+func (u *User) GetUserID() int {
+    return u.ID
+}
