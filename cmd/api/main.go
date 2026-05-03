@@ -1,39 +1,54 @@
 package main
 
 import (
+    "fmt"
 	"log"
-	"github.com/gofiber/fiber/v3"
-    "go-auth/internal/helper"
+    "time"
+
+    "go-auth/internal/config"
     "go-auth/internal/http/handler"
-    "go-auth/internal/service"
     "go-auth/internal/repository"
+    "go-auth/internal/security"
+    "go-auth/internal/service"
     "go-auth/pkg/validator"
-    "go-auth/pkg/utils"
+
+    "github.com/gofiber/fiber/v3"
     "github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
-	
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-    jwtAccessKey := helper.GetEnvString("JWT_ACCESS_KEY", "!JWTAccessKey!")
-    jwtAccessExpired := helper.GetEnvInt("JWT_ACCESS_EXPIRED", 15)
-    jwt := utils.NewJWT(jwtAccessKey, jwtAccessExpired)
-	
-    userRepository := repository.NewUserRepository()
-    
-    authService := service.NewAuthService(userRepository, jwt)
-    authHandler := handler.NewAuthHandler(authService)
+    if err := godotenv.Load(); err != nil {
+        log.Println("no .env file found, using system environment variables")
+    }
 
     appConfig := fiber.Config{
-    	AppName: helper.GetEnvString("APP_NAME", "Go App"),
+        AppName: config.GetAppName(),
         StructValidator: validator.NewValidator(),
     }
 
-	app := fiber.New(appConfig)
+    jwtAccessKey, err := config.GetJWTAccessKey()
+    if err != nil {
+        log.Fatalf("config error: %v", err)
+    }
+
+    jwtAccessExpired := time.Minute * time.Duration(config.GetJWTAccessExpired())
+    jwtAuth, err := security.NewJWTAuthToken(appConfig.AppName, jwtAccessKey, jwtAccessExpired)
+    if err != nil {
+        log.Fatalf("failed to initialize jwt: %v", err)
+    }
+
+    bcryptPassword := security.NewBcryptPassword()
+	
+    // REPOSITORIES
+    userRepository := repository.NewUserRepository()
+    
+    // SERVICES
+    authService := service.NewAuthService(userRepository, jwtAuth, bcryptPassword)
+
+    // HANDLERS
+    authHandler := handler.NewAuthHandler(authService)
+
+    app := fiber.New(appConfig)
 
     // ROUTES
 	app.Get("/", func(c fiber.Ctx) error {
@@ -45,5 +60,9 @@ func main() {
     authHandler.Routes(app)
     // END ROUTES
 
-    app.Listen(":8100")
+    port := config.GetAppPort()
+
+    if err := app.Listen(fmt.Sprintf(":%d", port)); err != nil {
+        log.Fatalf("server failed to start: %v", err)
+    }
 }
