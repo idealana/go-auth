@@ -10,9 +10,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+var ErrGenerateToken = errors.New("failed to generate token")
+
 type JWTGenerator interface {
     GenerateAccessToken(user UserClaims) (string, error)
-    GenerateToken(user UserClaims) (string, string, error)
+    GenerateToken(user UserClaims) (TokenPair, error)
 }
 
 type RefreshTokenGenerator interface {
@@ -38,6 +40,11 @@ type JWTAuthToken struct {
 	accessKey []byte
 	accessExpired time.Duration
 	signingMethod jwt.SigningMethod
+}
+
+type TokenPair struct {
+    AccessToken  string
+    RefreshToken string
 }
 
 func NewJWTAuthToken(appName, accessKey string, accessExpired time.Duration) (TokenGenerator, error) {
@@ -96,16 +103,19 @@ func (t *JWTAuthToken) GenerateRefreshToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (t *JWTAuthToken) GenerateToken(user UserClaims) (string, string, error) {
+func (t *JWTAuthToken) GenerateToken(user UserClaims) (TokenPair, error) {
 	accessToken, err := t.GenerateAccessToken(user)
 	if err != nil {
-		return "", "", fmt.Errorf("generate access token: %w", err)
+		return TokenPair{}, fmt.Errorf("%w: %w", ErrGenerateToken, err)
 	}
 	
 	refreshToken, err := t.GenerateRefreshToken()
 	if err != nil {
-		return "", "", fmt.Errorf("generate refresh token: %w", err)
+		return TokenPair{}, fmt.Errorf("%w: %w", ErrGenerateToken, err)
 	}
 
-	return accessToken, refreshToken, nil
+	return TokenPair{
+		AccessToken: accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
