@@ -1,19 +1,20 @@
 package repository
 
 import (
-	"errors"
+	"context"
+	
+	"go-auth/internal/apperror"
 	"go-auth/internal/model/domain"
-	"go-auth/internal/repository/iface"
 )
 
-func NewUserRepository() iface.UserRepositoryInterface {
+func NewUserRepository() UserRepositoryInterface {
 	return &UserRepository{}
 }
 
 type UserRepository struct {
 }
 
-func (repository *UserRepository) FindByEmail(email string) (domain.User, error) {
+func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
 	var user domain.User
 
 	// dummy data
@@ -25,7 +26,7 @@ func (repository *UserRepository) FindByEmail(email string) (domain.User, error)
 	}
 
 	if email != findUser.Email {
-		return user, errors.New("User not found.")
+		return user, apperror.ErrNotFound
 	}
 
 	user = findUser
