@@ -1,9 +1,11 @@
 package iface
 
 import (
+	"context"
+	
 	"go-auth/internal/model/domain"
 )
 
 type UserRepositoryInterface interface {
-	FindByEmail(email string) (domain.User, error)
+	FindByEmail(ctx context.Context, email string) (domain.User, error)
 }
