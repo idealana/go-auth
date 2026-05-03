@@ -1,25 +1,16 @@
 package service
 
 import (
-	"errors"
-    "go-auth/internal/model/domain"
-	"go-auth/internal/model/dto"
-    "go-auth/internal/repository/iface"
+    "context"
+    "errors"
+    "fmt"
+
+    "go-auth/internal/apperror"
+	"go-auth/internal/dto"
+    "go-auth/internal/repository"
 )
 
-var (
-	ErrInvalidCredentials = errors.New("invalid email or password")
-)
-
-type TokenService interface {
-    GenerateToken(*domain.User) (string, string, error)
-}
-
-type PasswordService interface {
-    Verify(hashed, plain string) bool
-}
-
-func NewAuthService(userRepository iface.UserRepositoryInterface, tokenService TokenService, passwordService PasswordService) *AuthService {
+func NewAuthService(userRepository repository.UserRepositoryInterface, tokenService TokenService, passwordService PasswordService) *AuthService {
     return &AuthService{
         UserRepository: userRepository,
         TokenService: tokenService,
@@ -28,29 +19,33 @@ func NewAuthService(userRepository iface.UserRepositoryInterface, tokenService T
 }
 
 type AuthService struct {
-    UserRepository iface.UserRepositoryInterface
+    UserRepository repository.UserRepositoryInterface
     TokenService TokenService
 	PasswordService PasswordService
 }
 
-func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
-	user, err := s.UserRepository.FindByEmail(req.Email)
+func (svc *AuthService) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResult, error) {
+	user, err := svc.UserRepository.FindByEmail(ctx, req.Email)
     if err != nil {
-        return dto.LoginResponse{}, ErrInvalidCredentials
+        if errors.Is(err, apperror.ErrNotFound) {
+            return dto.LoginResult{}, apperror.ErrInvalidCredentials
+        }
+
+        return dto.LoginResult{}, fmt.Errorf("find user: %w", err)
     }
 	
-    if !s.PasswordService.Verify(user.Password, req.Password) {
-        return dto.LoginResponse{}, ErrInvalidCredentials
+    if !svc.PasswordService.Verify(user.Password, req.Password) {
+        return dto.LoginResult{}, apperror.ErrInvalidCredentials
     }
 
-    accessToken, refreshToken, err := s.TokenService.GenerateToken(&user)
+    tokenPair, err := svc.TokenService.GenerateToken(&user)
     if err != nil {
-        return dto.LoginResponse{}, err
+        return dto.LoginResult{}, err
     }
 
-    return dto.LoginResponse{
+    return dto.LoginResult{
 		UserID: user.ID,
-		AccessToken: accessToken,
-		RefreshToken: refreshToken,
+		AccessToken: tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
 	}, nil
 }
