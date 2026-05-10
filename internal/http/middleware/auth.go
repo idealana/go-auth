@@ -2,71 +2,71 @@ package middleware
 
 import (
     "context"
-    "log"
-    "strings"
     
+    "go-auth/internal/helper"
+    "go-auth/internal/http/response"
+    "go-auth/internal/logger"
     "go-auth/internal/model/domain"
   
     "github.com/gofiber/fiber/v3"
 )
 
-type ctxKey string
+type authKey struct {
+	name string
+}
 
-const AuthHeader = "Authorization"
-const AuthKey ctxKey = "auth"
+var defaultAuthKey = authKey{"validated_auth"}
 
 type TokenParser interface {
     ParseAccessToken(ctx context.Context, token string) (*domain.Auth, error)
 }
 
-func ValidateAuth(tokenParser TokenParser) fiber.Handler {
+type Auth struct {
+    tokenParser TokenParser
+    log logger.Logger
+}
+
+func NewAuth(tokenParser TokenParser, log logger.Logger) *Auth {
+    return &Auth{
+        tokenParser: tokenParser,
+        log: log,
+    }
+}
+
+func (auth *Auth) ValidateAuth() fiber.Handler {
     return func(ctx fiber.Ctx) error {
-        authHeader := ctx.Get(AuthHeader)
+        authHeader := ctx.Get("Authorization")
         if authHeader == "" {
-            log.Printf("missing authorization header")
-            
-            return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-                "message": "Missing Authorization Header",
-            })
+            auth.log.Warn("missing authorization header", "path", ctx.Path())
+
+            return response.Unauthorized(ctx, "Missing Authorization Header")
         }
 
-        token := parseBearerToken(authHeader)
+        token := helper.ParseBearerToken(authHeader)
         if token == "" {
-            log.Printf("invalid authorization format")
-            
-            return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-                "message": "Invalid Authorization Format",
-            })
+            auth.log.Warn("invalid authorization format", "path", ctx.Path())
+
+            return response.Unauthorized(ctx, "Invalid Authorization Format")
         }
         
-        auth, err := tokenParser.ParseAccessToken(ctx.Context(), token)
+        authUser, err := auth.tokenParser.ParseAccessToken(ctx.Context(), token)
         if err != nil {
-            log.Printf("failed to parse token: %v", err)
-            
-            return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-                "message": "Invalid Access Token",
-            })
+            auth.log.Error("failed to parse token", "error", err, "path", ctx.Path())
+
+            return response.Unauthorized(ctx, "Invalid Access Token")
         }
 
-        ctx.Locals(string(AuthKey), auth)
+        ctx.Locals(defaultAuthKey, authUser)
         return ctx.Next()
     }
 }
 
 func GetAuth(ctx fiber.Ctx) (*domain.Auth, bool) {
-    val := ctx.Locals(string(AuthKey))
+    val := ctx.Locals(defaultAuthKey)
     if val == nil {
         return nil, false
     }
     
     auth, ok := val.(*domain.Auth)
     return auth, ok
-}
-
-func parseBearerToken(header string) string {
-    parts := strings.SplitN(header, " ", 2)
-    if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-        return ""
-    }
-    return parts[1]
 }
