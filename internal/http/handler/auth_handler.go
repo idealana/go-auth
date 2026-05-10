@@ -2,9 +2,11 @@ package handler
 
 import (
     "errors"
+    "log/slog"
 
     "go-auth/internal/apperror"
 	"go-auth/internal/dto"
+    "go-auth/internal/http/middleware"
     "go-auth/internal/service"
 	"go-auth/pkg/validator"
 
@@ -20,24 +22,18 @@ type AuthHandler struct {
 }
 
 func (handler *AuthHandler) Routes(app *fiber.App) {
-	app.Post("/login", handler.Login)
+	app.Post("/login", middleware.ValidateRequest[dto.LoginRequest](), handler.Login)
 }
 
 func (handler *AuthHandler) Login(ctx fiber.Ctx) error {
-	var req dto.LoginRequest
-
-	if err := ctx.Bind().Body(&req); err != nil {
-        var valErr *validator.ValidationError
-		if errors.As(err, &valErr) {
-            return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-                "message": "Bad request",
-                "errors": valErr.Errors,
-            })
-        }
-
-        return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "message": "Invalid Request",
-            "errors": map[string]string{},
+	req, ok := middleware.GetRequest[dto.LoginRequest](ctx)
+    if !ok {
+        slog.Error("validated request not found in context",
+            "handler", "AuthHandler.Login",
+            "path", ctx.Path(),
+        )
+        return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "message": "Failed to parse request",
         })
     }
 
