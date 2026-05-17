@@ -1,6 +1,13 @@
 package logger
 
+import (
+	"os"
+)
+
+var ExitApp = os.Exit
+
 type Logger interface {
+	Fatal(message string, args ...any)
 	Error(message string, args ...any)
     Warn(message string, args ...any)
     Info(message string, args ...any)
