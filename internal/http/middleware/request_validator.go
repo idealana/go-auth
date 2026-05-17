@@ -33,7 +33,7 @@ func ValidateRequest[T any](rv *RequestValidator) fiber.Handler {
 			return rv.handleBindError(ctx, err)
 		}
 		
-		ctx.Locals(requestKey{typeName: typeNameOf[T]()}), &req)
+		ctx.Locals(requestKey{typeName: typeNameOf[T]()}, &req)
 		return ctx.Next()
 	}
 }
