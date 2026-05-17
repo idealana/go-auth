@@ -21,26 +21,30 @@ type BcryptPassword struct {
 	cost int
 }
 
-func NewBcryptPassword(cost int) PasswordManager {
-	if cost < bcrypt.MinCost || cost > bcrypt.MaxCost {
-        cost = bcrypt.DefaultCost
-    }
+func NewBcryptPassword(cost ...int) PasswordManager {
+	selectedCost := bcrypt.DefaultCost
+
+	if len(cost) > 0 &&
+		cost[0] >= bcrypt.MinCost &&
+		cost[0] <= bcrypt.MaxCost {
+		selectedCost = cost[0]
+	}
 	
 	return &BcryptPassword{
-		cost: cost,
+		cost: selectedCost,
 	}
 }
 
-func (p *BcryptPassword) Verify(password, hash string) error {
-	if password == "" {
+func (p *BcryptPassword) Verify(hashed, plain string) error {
+	if hashed == "" {
+		return ErrInvalidPassword
+	}
+
+	if plain == "" {
 		return ErrEmptyPassword
 	}
 	
-	if hash == "" {
-		return ErrInvalidPassword
-	}
-	
-    if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)); err != nil {
+    if err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(plain)); err != nil {
 		return ErrInvalidPassword
 	}
 	
