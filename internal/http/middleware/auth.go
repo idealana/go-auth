@@ -6,7 +6,7 @@ import (
     "go-auth/internal/helper"
     "go-auth/internal/http/response"
     "go-auth/internal/logger"
-    "go-auth/internal/model/domain"
+    "go-auth/internal/security"
   
     "github.com/gofiber/fiber/v3"
 )
@@ -18,7 +18,7 @@ type authKey struct {
 var defaultAuthKey = authKey{"validated_auth"}
 
 type TokenParser interface {
-    ParseAccessToken(ctx context.Context, token string) (*domain.Auth, error)
+    ParseAccessToken(ctx context.Context, token string) (*security.JWTClaims, error)
 }
 
 type Auth struct {
@@ -61,12 +61,12 @@ func (auth *Auth) ValidateAuth() fiber.Handler {
     }
 }
 
-func GetAuth(ctx fiber.Ctx) (*domain.Auth, bool) {
+func GetAuth(ctx fiber.Ctx) (*security.JWTClaims, bool) {
     val := ctx.Locals(defaultAuthKey)
     if val == nil {
         return nil, false
     }
     
-    auth, ok := val.(*domain.Auth)
+    auth, ok := val.(*security.JWTClaims)
     return auth, ok
 }
