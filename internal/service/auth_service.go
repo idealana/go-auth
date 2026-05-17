@@ -34,7 +34,7 @@ func (svc *AuthService) Login(ctx context.Context, req dto.LoginRequest) (dto.Lo
         return dto.LoginResult{}, fmt.Errorf("find user: %w", err)
     }
 	
-    if !svc.PasswordService.Verify(user.Password, req.Password) {
+    if err := svc.PasswordService.Verify(user.Password, req.Password); err != nil {
         return dto.LoginResult{}, apperror.ErrInvalidCredentials
     }
 
