@@ -8,21 +8,27 @@ import (
 	"go-auth/internal/dto"
     "go-auth/internal/http/middleware"
     "go-auth/internal/service"
-	"go-auth/pkg/validator"
 
     "github.com/gofiber/fiber/v3"
 )
 
-func NewAuthHandler(authService service.AuthServiceInterface) AuthHandlerInterface {
-	return &AuthHandler{authService}
+func NewAuthHandler(
+    authService service.AuthServiceInterface,
+    rv *middleware.RequestValidator,
+) AuthHandlerInterface {
+	return &AuthHandler{authService, rv}
 }
 
 type AuthHandler struct {
 	authService service.AuthServiceInterface
+    reqValidator *middleware.RequestValidator
 }
 
 func (handler *AuthHandler) Routes(app *fiber.App) {
-	app.Post("/login", middleware.ValidateRequest[dto.LoginRequest](), handler.Login)
+    app.Post("/login",
+        middleware.ValidateRequest[dto.LoginRequest](handler.reqValidator),
+        handler.Login,
+    )
 }
 
 func (handler *AuthHandler) Login(ctx fiber.Ctx) error {
@@ -37,7 +43,7 @@ func (handler *AuthHandler) Login(ctx fiber.Ctx) error {
         })
     }
 
-    result, err := handler.authService.Login(ctx.Context(), req)
+    result, err := handler.authService.Login(ctx.Context(), *req)
 
     if err != nil {
         if errors.Is(err, apperror.ErrInvalidCredentials) {
