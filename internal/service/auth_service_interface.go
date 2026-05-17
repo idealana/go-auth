@@ -1,4 +1,4 @@
-package iface
+package service
 
 import (
     "context"
@@ -16,5 +16,5 @@ type TokenService interface {
 }
 
 type PasswordService interface {
-    Verify(hashed, plain string) bool
+    Verify(hashed, plain string) error
 }
