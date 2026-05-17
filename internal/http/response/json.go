@@ -38,8 +38,8 @@ func normalizeErrors(errs map[string]string) map[string]string {
     return map[string]string{}
 }
 
-func newSuccessResponse[T any](message string, data T) SuccessResponse {
-    return SuccessResponse{
+func newSuccessResponse[T any](message string, data T) SuccessResponse[T] {
+    return SuccessResponse[T]{
         Success: true,
         Message: message,
         Data: data,
