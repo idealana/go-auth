@@ -6,6 +6,11 @@ import (
 
 type defaultLogger struct {}
 
+func (defaultLogger) Fatal(message string, args ...any) {
+	slog.Error(message, args...)
+	ExitApp(1)
+}
+
 func (defaultLogger) Error(message string, args ...any) {
 	slog.Error(message, args...)
 }
