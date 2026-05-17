@@ -58,6 +58,7 @@ func main() {
     authHandler := handler.NewAuthHandler(
         authService,
         reqValidator,
+        log,
     )
 
     app := fiber.New(appConfig)

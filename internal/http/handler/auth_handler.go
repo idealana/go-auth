@@ -2,11 +2,11 @@ package handler
 
 import (
     "errors"
-    "log/slog"
 
     "go-auth/internal/apperror"
 	"go-auth/internal/dto"
     "go-auth/internal/http/middleware"
+    "go-auth/internal/logger"
     "go-auth/internal/service"
 
     "github.com/gofiber/fiber/v3"
@@ -15,13 +15,15 @@ import (
 func NewAuthHandler(
     authService service.AuthServiceInterface,
     rv *middleware.RequestValidator,
+    log logger.Logger,
 ) AuthHandlerInterface {
-	return &AuthHandler{authService, rv}
+	return &AuthHandler{authService, rv, log}
 }
 
 type AuthHandler struct {
 	authService service.AuthServiceInterface
     reqValidator *middleware.RequestValidator
+    log logger.Logger
 }
 
 func (handler *AuthHandler) Routes(app *fiber.App) {
@@ -34,7 +36,8 @@ func (handler *AuthHandler) Routes(app *fiber.App) {
 func (handler *AuthHandler) Login(ctx fiber.Ctx) error {
 	req, ok := middleware.GetRequest[dto.LoginRequest](ctx)
     if !ok {
-        slog.Error("validated request not found in context",
+        handler.log.Error(
+            "validated request not found in context",
             "handler", "AuthHandler.Login",
             "path", ctx.Path(),
         )
