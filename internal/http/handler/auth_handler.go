@@ -6,6 +6,7 @@ import (
     "go-auth/internal/apperror"
 	"go-auth/internal/dto"
     "go-auth/internal/http/middleware"
+    "go-auth/internal/http/response"
     "go-auth/internal/logger"
     "go-auth/internal/service"
 
@@ -27,7 +28,8 @@ type AuthHandler struct {
 }
 
 func (handler *AuthHandler) Routes(app *fiber.App) {
-    app.Post("/login",
+    app.Post(
+        "/login",
         middleware.ValidateRequest[dto.LoginRequest](handler.reqValidator),
         handler.Login,
     )
@@ -41,32 +43,25 @@ func (handler *AuthHandler) Login(ctx fiber.Ctx) error {
             "handler", "AuthHandler.Login",
             "path", ctx.Path(),
         )
-        return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "message": "Failed to parse request",
-        })
+        return response.InternalServerError(ctx, "Failed to parse request")
     }
 
     result, err := handler.authService.Login(ctx.Context(), *req)
 
     if err != nil {
         if errors.Is(err, apperror.ErrInvalidCredentials) {
-            return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-                "message": err.Error(),
-            })
+            return response.Unauthorized(ctx, err.Error())
         }
     	
-        return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-            "message": "Internal Service Error",
-        })
+        return response.InternalServerError(ctx, "Internal Service Error")
     }
 
-    data := dto.LoginResponse{
-        UserID: result.UserID,
-        AccessToken: result.AccessToken,
-    }
-
-    return ctx.JSON(fiber.Map{
-        "message": "Login Successfully",
-        "data": data,
-    })
+    return response.Success[dto.LoginResponse](
+        ctx,
+        "Login Successfully",
+        dto.LoginResponse{
+            UserID: result.UserID,
+            AccessToken: result.AccessToken,
+        },
+    )
 }
