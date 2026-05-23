@@ -11,3 +11,7 @@ func GetAppName() string {
 func GetAppPort() int {
 	return helper.GetEnvInt("APP_PORT", 8000)
 }
+
+func GetAppDefaultLocale() string {
+	return helper.GetEnvString("APP_DEFAULT_LOCALE", "en")
+}
