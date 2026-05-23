@@ -17,11 +17,16 @@ type requestKey struct {
 
 type RequestValidator struct {
 	log logger.Logger
+	validator validator.Validator
 }
 
-func NewRequestValidator(log logger.Logger) *RequestValidator {
+func NewRequestValidator(
+	log logger.Logger,
+	validator validator.Validator,
+) *RequestValidator {
 	return &RequestValidator{
 		log: log,
+		validator: validator,
 	}
 }
 
@@ -30,6 +35,12 @@ func ValidateRequest[T any](rv *RequestValidator) fiber.Handler {
 		var req T
 
 		if err := ctx.Bind().Body(&req); err != nil {
+			return rv.handleBindError(ctx, err)
+		}
+
+		locale := GetLocale(ctx)
+
+		if err := rv.validator.ValidateWithLocale(&req, locale); err != nil {
 			return rv.handleBindError(ctx, err)
 		}
 		

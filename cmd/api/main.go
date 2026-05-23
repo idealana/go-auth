@@ -31,7 +31,6 @@ func main() {
 
     appConfig := fiber.Config{
         AppName: config.GetAppName(),
-        StructValidator: validatorService,
     }
 
     jwtAccessKey, err := config.GetJWTAccessKey()
@@ -45,7 +44,7 @@ func main() {
         log.Fatal("failed to initialize jwt", "error", err)
     }
 
-    reqValidator := middleware.NewRequestValidator(log)
+    reqValidator := middleware.NewRequestValidator(log, validatorService)
     bcryptPassword := security.NewBcryptPassword()
 	
     // REPOSITORIES
@@ -62,6 +61,12 @@ func main() {
     )
 
     app := fiber.New(appConfig)
+
+    localeConfig := middleware.LocaleConfig{
+        SupportLocales: []string{"en", "id"},
+        DefaultLocale: config.GetAppDefaultLocale(),
+    }
+    app.Use(middleware.Locale(localeConfig))
 
     // ROUTES
 	app.Get("/", func(c fiber.Ctx) error {
