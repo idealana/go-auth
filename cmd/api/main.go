@@ -5,6 +5,7 @@ import (
     "time"
 
     "go-auth/internal/config"
+    "go-auth/internal/database"
     "go-auth/internal/http/handler"
     "go-auth/internal/http/middleware"
     "go-auth/internal/logger"
@@ -46,9 +47,14 @@ func main() {
 
     reqValidator := middleware.NewRequestValidator(log, validatorService)
     bcryptPassword := security.NewBcryptPassword()
+
+    // initialize database connection
+    db := database.ConnectDatabase()
+    // auto migrate
+    database.Migrate(db)
 	
     // REPOSITORIES
-    userRepository := repository.NewUserRepository()
+    userRepository := repository.NewUserRepository(db)
     
     // SERVICES
     authService := service.NewAuthService(userRepository, jwtAuth, bcryptPassword)
