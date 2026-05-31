@@ -6,7 +6,7 @@ import (
     "fmt"
 
     "go-auth/internal/apperror"
-	"go-auth/internal/dto"
+	"go-auth/internal/model/dto"
     "go-auth/internal/repository"
 )
 

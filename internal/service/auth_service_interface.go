@@ -3,7 +3,7 @@ package service
 import (
     "context"
 
-	"go-auth/internal/dto"
+	"go-auth/internal/model/dto"
     "go-auth/internal/security"
 )
 

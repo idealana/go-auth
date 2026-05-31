@@ -4,9 +4,9 @@ import (
     "errors"
 
     "go-auth/internal/apperror"
-	"go-auth/internal/dto"
     "go-auth/internal/http/middleware"
     "go-auth/internal/http/response"
+    "go-auth/internal/model/dto"
     "go-auth/internal/logger"
     "go-auth/internal/service"
 
