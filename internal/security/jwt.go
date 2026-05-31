@@ -22,7 +22,7 @@ type RefreshTokenGenerator interface {
 }
 
 type UserClaims interface {
-    GetUserID() int
+    GetUserID() uint
 }
 
 type TokenGenerator interface {
@@ -31,7 +31,7 @@ type TokenGenerator interface {
 }
 
 type JWTClaims struct {
-	UserID int `json:"user_id"`
+	UserID uint `json:"user_id"`
 	jwt.RegisteredClaims
 }
 

@@ -6,12 +6,12 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-    UserID int `json:"user_id"`
+    UserID uint `json:"user_id"`
     AccessToken string `json:"access_token"`
 }
 
 type LoginResult struct {
-    UserID int
+    UserID uint
     AccessToken string
     RefreshToken string
 }
