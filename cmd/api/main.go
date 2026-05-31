@@ -81,7 +81,9 @@ func main() {
         })
     })
 
-    authHandler.Routes(app)
+    api := app.Group("/api")
+
+    authHandler.Routes(api)
     // END ROUTES
 
     port := config.GetAppPort()

@@ -27,7 +27,7 @@ type AuthHandler struct {
     log logger.Logger
 }
 
-func (handler *AuthHandler) Routes(app *fiber.App) {
+func (handler *AuthHandler) Routes(app fiber.Router) {
     app.Post(
         "/login",
         middleware.ValidateRequest[dto.LoginRequest](handler.reqValidator),

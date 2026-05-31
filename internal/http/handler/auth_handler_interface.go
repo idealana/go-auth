@@ -5,6 +5,6 @@ import (
 )
 
 type AuthHandlerInterface interface {
-	Routes(app *fiber.App)
+	Routes(app fiber.Router)
     Login(ctx fiber.Ctx) error
 }
