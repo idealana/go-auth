@@ -8,4 +8,5 @@ import (
 
 type UserRepositoryInterface interface {
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
+	FindById(ctx context.Context, id uint) (domain.User, error)
 }
