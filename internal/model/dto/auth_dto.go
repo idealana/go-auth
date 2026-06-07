@@ -15,3 +15,17 @@ type LoginResult struct {
     AccessToken string
     RefreshToken string
 }
+
+type ProfileResponse struct {
+    UserID uint `json:"user_id"`
+    Email string `json:"email"`
+    Role string `json:"role"`
+    Status string `json:"status"`
+}
+
+type ProfileResult struct {
+    UserID uint
+    Email string
+    Role string
+    Status string
+}
