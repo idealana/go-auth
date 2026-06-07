@@ -38,3 +38,22 @@ func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (doma
 
 	return user, nil
 }
+
+func (repo *UserRepository) FindById(ctx context.Context, id uint) (domain.User, error) {
+	var user domain.User
+
+	err := repo.DB.
+		WithContext(ctx).
+		Where(&domain.User{ID: id}).
+		First(&user).
+		Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.User{}, apperror.ErrNotFound
+		}
+		return domain.User{}, err
+	}
+
+	return user, nil
+}

@@ -46,6 +46,7 @@ func main() {
     }
 
     reqValidator := middleware.NewRequestValidator(log, validatorService)
+    authChecker := middleware.NewAuth(jwtAuth, log)
     bcryptPassword := security.NewBcryptPassword()
 
     // initialize database connection
@@ -64,6 +65,7 @@ func main() {
         authService,
         reqValidator,
         log,
+        authChecker,
     )
 
     app := fiber.New(appConfig)

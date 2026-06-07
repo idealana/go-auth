@@ -49,3 +49,21 @@ func (svc *AuthService) Login(ctx context.Context, req dto.LoginRequest) (dto.Lo
 		RefreshToken: tokenPair.RefreshToken,
 	}, nil
 }
+
+func (svc *AuthService) GetProfile(ctx context.Context, userId uint) (dto.ProfileResult, error) {
+    user, err := svc.UserRepository.FindById(ctx, userId)
+    if err != nil {
+        if errors.Is(err, apperror.ErrNotFound) {
+            return dto.ProfileResult{}, apperror.ErrNotFound
+        }
+
+        return dto.ProfileResult{}, fmt.Errorf("find user: %w", err)
+    }
+
+    return dto.ProfileResult{
+		UserID: user.ID,
+		Email: user.Email,
+        Role: user.Role,
+        Status: user.Status,
+	}, nil
+}

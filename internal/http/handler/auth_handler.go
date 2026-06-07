@@ -17,21 +17,30 @@ func NewAuthHandler(
     authService service.AuthServiceInterface,
     rv *middleware.RequestValidator,
     log logger.Logger,
+    authChecker *middleware.Auth,
 ) AuthHandlerInterface {
-	return &AuthHandler{authService, rv, log}
+	return &AuthHandler{authService, rv, log, authChecker}
 }
 
 type AuthHandler struct {
 	authService service.AuthServiceInterface
     reqValidator *middleware.RequestValidator
     log logger.Logger
+    authChecker *middleware.Auth
 }
 
 func (handler *AuthHandler) Routes(app fiber.Router) {
-    app.Post(
-        "/login",
+    app.Post("/login",
         middleware.ValidateRequest[dto.LoginRequest](handler.reqValidator),
         handler.Login,
+    )
+
+    auth := app.Group("/auth",
+        handler.authChecker.ValidateAuth(),
+    )
+
+    auth.Get("/profile",
+        handler.Profile,
     )
 }
 
@@ -62,6 +71,33 @@ func (handler *AuthHandler) Login(ctx fiber.Ctx) error {
         dto.LoginResponse{
             UserID: result.UserID,
             AccessToken: result.AccessToken,
+        },
+    )
+}
+
+func (handler *AuthHandler) Profile(ctx fiber.Ctx) error {
+    auth, ok := middleware.GetAuth(ctx)
+    if !ok {
+        return response.Unauthorized(ctx, "Invalid User")
+    }
+    
+    result, err := handler.authService.GetProfile(ctx.Context(), auth.UserID)
+    if err != nil {
+        if errors.Is(err, apperror.ErrNotFound) {
+            return response.NotFound(ctx, err.Error())
+        }
+    	
+        return response.InternalServerError(ctx, "Internal Service Error")
+    }
+
+    return response.Success[dto.ProfileResponse](
+        ctx,
+        "Success",
+        dto.ProfileResponse{
+            UserID: result.UserID,
+            Email: result.Email,
+            Role: result.Role,
+            Status: result.Status,
         },
     )
 }
