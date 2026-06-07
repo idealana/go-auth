@@ -1,6 +1,7 @@
 package security
 
 import (
+	"context"
 	"errors"
 	"time"
 	"fmt"
@@ -11,10 +12,13 @@ import (
 )
 
 var ErrGenerateToken = errors.New("failed to generate token")
+var ErrInvalidToken = errors.New("invalid token")
+var ErrExpiredToken = errors.New("token has expired")
 
 type JWTGenerator interface {
     GenerateAccessToken(user UserClaims) (string, error)
     GenerateToken(user UserClaims) (TokenPair, error)
+	ParseAccessToken(ctx context.Context, token string) (*JWTClaims, error)
 }
 
 type RefreshTokenGenerator interface {
@@ -118,4 +122,34 @@ func (t *JWTAuthToken) GenerateToken(user UserClaims) (TokenPair, error) {
 		AccessToken: accessToken,
 		RefreshToken: refreshToken,
 	}, nil
+}
+
+func (t *JWTAuthToken) ParseAccessToken(ctx context.Context, tokenString string) (*JWTClaims, error) {
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		&JWTClaims{},
+		func (token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, ErrInvalidToken
+			}
+			return t.accessKey, nil
+		},
+	)
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, ErrExpiredToken
+		}
+		return nil, ErrInvalidToken
+	}
+
+	if !token.Valid {
+		return nil, ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(*JWTClaims)
+	if !ok {
+		return nil, ErrInvalidToken
+	}
+
+	return claims, nil
 }
