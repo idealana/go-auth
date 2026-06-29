@@ -55,7 +55,12 @@ func (handler *AuthHandler) Login(ctx fiber.Ctx) error {
         return response.InternalServerError(ctx, "Failed to parse request")
     }
 
-    result, err := handler.authService.Login(ctx.Context(), *req)
+    reqInfo := dto.RequestInfo{
+        IPAddress: ctx.IP(),
+        UserAgent: ctx.Get(fiber.HeaderUserAgent),
+    }
+
+    result, err := handler.authService.Login(ctx.Context(), *req, &reqInfo)
 
     if err != nil {
         if errors.Is(err, apperror.ErrInvalidCredentials) {
@@ -71,6 +76,7 @@ func (handler *AuthHandler) Login(ctx fiber.Ctx) error {
         dto.LoginResponse{
             UserID: result.UserID,
             AccessToken: result.AccessToken,
+            RefreshToken: result.RefreshToken,
         },
     )
 }

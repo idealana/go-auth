@@ -19,3 +19,8 @@ func GetJWTAccessExpired() int {
 	defaultExpired := 15
 	return helper.GetEnvInt("JWT_ACCESS_EXPIRED", defaultExpired)
 }
+
+func GetJWTRefreshExpired() int {
+	defaultExpired := 7
+	return helper.GetEnvInt("JWT_REFRESH_EXPIRED", defaultExpired)
+}

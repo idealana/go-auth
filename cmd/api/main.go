@@ -56,9 +56,10 @@ func main() {
 	
     // REPOSITORIES
     userRepository := repository.NewUserRepository(db)
+    refreshTokenRepository := repository.NewRefreshTokenRepository(db)
     
     // SERVICES
-    authService := service.NewAuthService(userRepository, jwtAuth, bcryptPassword)
+    authService := service.NewAuthService(userRepository, refreshTokenRepository, jwtAuth, bcryptPassword)
 
     // HANDLERS
     authHandler := handler.NewAuthHandler(

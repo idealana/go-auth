@@ -8,7 +8,7 @@ import (
 )
 
 type AuthServiceInterface interface {
-    Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResult, error)
+    Login(ctx context.Context, req dto.LoginRequest, reqInfo *dto.RequestInfo) (dto.LoginResult, error)
     GetProfile(ctx context.Context, userId uint) (dto.ProfileResult, error)
 }
 

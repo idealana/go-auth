@@ -7,4 +7,5 @@ import (
 var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrNotFound = errors.New("data not found")
+	ErrCreateRefreshToken = errors.New("failed to create refresh token")
 )

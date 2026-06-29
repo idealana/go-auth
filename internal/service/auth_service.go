@@ -4,15 +4,25 @@ import (
     "context"
     "errors"
     "fmt"
+    "time"
 
     "go-auth/internal/apperror"
+    "go-auth/internal/config"
+    "go-auth/internal/helper"
+    "go-auth/internal/model/domain"
 	"go-auth/internal/model/dto"
     "go-auth/internal/repository"
 )
 
-func NewAuthService(userRepository repository.UserRepositoryInterface, tokenService TokenService, passwordService PasswordService) *AuthService {
+func NewAuthService(
+    userRepository repository.UserRepositoryInterface,
+    refrehTokenRepository repository.RefreshTokenRepositoryInterface,
+    tokenService TokenService,
+    passwordService PasswordService,
+) *AuthService {
     return &AuthService{
         UserRepository: userRepository,
+        RefreshTokenRepository: refrehTokenRepository,
         TokenService: tokenService,
 		PasswordService: passwordService,
     }
@@ -20,11 +30,12 @@ func NewAuthService(userRepository repository.UserRepositoryInterface, tokenServ
 
 type AuthService struct {
     UserRepository repository.UserRepositoryInterface
+    RefreshTokenRepository repository.RefreshTokenRepositoryInterface
     TokenService TokenService
 	PasswordService PasswordService
 }
 
-func (svc *AuthService) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResult, error) {
+func (svc *AuthService) Login(ctx context.Context, req dto.LoginRequest, reqInfo *dto.RequestInfo) (dto.LoginResult, error) {
 	user, err := svc.UserRepository.FindByEmail(ctx, req.Email)
     if err != nil {
         if errors.Is(err, apperror.ErrNotFound) {
@@ -41,6 +52,18 @@ func (svc *AuthService) Login(ctx context.Context, req dto.LoginRequest) (dto.Lo
     tokenPair, err := svc.TokenService.GenerateToken(&user)
     if err != nil {
         return dto.LoginResult{}, err
+    }
+
+    refreshToken := domain.RefreshToken{
+        UserID: user.ID,
+        TokenHash: helper.HashToken(tokenPair.RefreshToken),
+        ExpiredAt: time.Now().Add(time.Duration(config.GetJWTRefreshExpired()) * 24 * time.Hour),
+        IPAddress: &reqInfo.IPAddress,
+        UserAgent: &reqInfo.UserAgent,
+    }
+
+    if err := svc.RefreshTokenRepository.Insert(ctx, &refreshToken); err != nil {
+        return dto.LoginResult{}, apperror.ErrCreateRefreshToken
     }
 
     return dto.LoginResult{
