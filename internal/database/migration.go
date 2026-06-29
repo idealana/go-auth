@@ -9,6 +9,7 @@ import (
 func Migrate(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&domain.User{},
+		&domain.RefreshToken{},
 	)
 	if err != nil {
 		panic(err)
